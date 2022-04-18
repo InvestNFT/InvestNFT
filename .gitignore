@@ -1,0 +1,16 @@
+.env
+coverage
+coverage.json
+typechain
+yarn.lock
+package-lock.json
+#Hardhat files
+cache
+artifacts
+
+secrets.json
+
+.idea/*
+node_modules
+verify.txt
+infoHash.js
