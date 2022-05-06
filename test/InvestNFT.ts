@@ -1,7 +1,6 @@
 import { expect } from "chai"
 import { ethers, network } from "hardhat"
-import { BigNumber, Contract, Signer, Wallet } from "ethers"
-
+import { Contract, Signer } from "ethers"
 
 describe("InvestNFT", function() {
   let operator: Signer, operatorAddr: string
@@ -13,7 +12,7 @@ describe("InvestNFT", function() {
   let busd: Contract, wbnb: Contract, wbLP: Contract
   let bcnt: Contract, bbLP: Contract
   let pancakeRouter: Contract
-  let gatewayImpl: Contract
+  let gatewayImpl: Contract, gatewayImplV2: Contract
   let gateway: Contract
   let erc721byTokenA: Contract, erc721byTokenB: Contract
   let erc721payableA: Contract, erc721payableB: Contract
@@ -25,12 +24,36 @@ describe("InvestNFT", function() {
   const zeroAddress = "0x0000000000000000000000000000000000000000"
 
   const autoCompoundAddr = "0x674ABa03bCbda010115db089DF7622b8E828a306"
-
+  
   before(async () => {
-    [receiver, operator] = await ethers.getSigners()
-    receiverAddr = await receiver.getAddress()
-    operatorAddr = await operator.getAddress()
-
+    await network.provider.request({
+        method: "hardhat_impersonateAccount",
+        params: [ownerAddr],
+    });
+    await network.provider.request({
+        method: "hardhat_impersonateAccount",
+        params: ["0xDa2f56143BC88F1eA76986E5b14b7B7fC78E8971"],
+    });
+    await network.provider.request({
+        method: "hardhat_impersonateAccount",
+        params: ["0xf16bE3C010f0Ea801C3AEfcF20b1fd01b9Ead0B7"],
+    });
+    await network.provider.send("hardhat_setBalance", [
+        ownerAddr,
+        "0x1000000000000000000",
+      ]);
+      await network.provider.send("hardhat_setBalance", [
+        "0xDa2f56143BC88F1eA76986E5b14b7B7fC78E8971",
+        "0x1000000000000000000",
+      ]);
+      await network.provider.send("hardhat_setBalance", [
+        "0xf16bE3C010f0Ea801C3AEfcF20b1fd01b9Ead0B7",
+        "0x1000000000000000000",
+      ]);
+    receiver = await ethers.getSigner("0xDa2f56143BC88F1eA76986E5b14b7B7fC78E8971");
+    operator = await ethers.getSigner("0xf16bE3C010f0Ea801C3AEfcF20b1fd01b9Ead0B7");
+    receiverAddr = "0xDa2f56143BC88F1eA76986E5b14b7B7fC78E8971";
+    operatorAddr = "0xf16bE3C010f0Ea801C3AEfcF20b1fd01b9Ead0B7";
     const deciaml = 18
     const initSupply = ethers.utils.parseUnits("10000000")
 
@@ -121,11 +144,6 @@ describe("InvestNFT", function() {
     const receiverAmount = ethers.utils.parseUnits("2000")
     await busd.connect(operator).transfer(receiverAddr, receiverAmount)
 
-    await network.provider.request({
-        method: "hardhat_impersonateAccount",
-        params: [ownerAddr]
-    })
-
     owner = ethers.provider.getSigner(ownerAddr)
     user = owner
     userAddr = ownerAddr
@@ -163,16 +181,6 @@ describe("InvestNFT", function() {
     expect(await erc721payableA.callStatic.gateway()).to.equal(gateway.address)
 
     await gateway.connect(operator).setNftData(erc721payableA.address, autoCompoundAddr, zeroAddress, zeroAddress, false, 10)
-
-    erc721payableB = await (
-        await ethers.getContractFactory("stubERC721", operator)
-    ).deploy(contractURI, blindBoxURI, whitelist, freeMintList);
-
-    await erc721payableB.connect(operator).initialize(gateway.address)
-    expect(await erc721payableB.callStatic.gateway()).to.equal(gateway.address)
-
-    await gateway.connect(operator).setNftData(erc721payableB.address, autoCompoundAddr, zeroAddress, zeroAddress, false, 10)
-
   })
 
   it("Should not re-initialize", async () => {
@@ -193,7 +201,33 @@ describe("InvestNFT", function() {
     )).to.be.revertedWith("Only the contract owner may perform this action")
   })
 
-  it("NFT TokenInfo must be updated after minted", async () => {
+  it("Should be able to upgrade", async () => {
+    gatewayImplV2 = await (
+        await ethers.getContractFactory("InvestNFTGatewayBNBChain", operator)
+    ).deploy()
+
+    await gateway.connect(operator).upgradeTo(
+      gatewayImplV2.address
+    )
+
+    gateway = gatewayImplV2.attach(gateway.address)
+
+    const contractURI = "ipfs://QmYnjGeLbBhfDM8Y11F5hVMDdGQz91dFCroHT8eiygnXxC/contract.json"
+    const blindBoxURI = "ipfs://QmX5CnSJjtunPUp67DwVYUBgPYR2PB18M6riqPa3vercUp/"
+    const whitelist = ethers.utils.formatBytes32String("test")
+    const freeMintList = ethers.utils.formatBytes32String("test")
+
+    erc721payableB = await (
+        await ethers.getContractFactory("stubERC721", operator)
+    ).deploy(contractURI, blindBoxURI, whitelist, freeMintList);
+
+    await erc721payableB.connect(operator).initialize(gateway.address)
+    expect(await erc721payableB.callStatic.gateway()).to.equal(gateway.address)
+
+    await gateway.connect(operator).initNftData(erc721payableB.address, autoCompoundAddr, zeroAddress, zeroAddress, false, 10)
+  })
+
+  it("NFT TokenInfo should be updated after minted", async () => {
     // transfer stablecoin to receiver
     const receiverAmount = ethers.utils.parseUnits("2000")
     expect(await busd.callStatic.balanceOf(receiverAddr)).to.equal(receiverAmount)
@@ -251,45 +285,9 @@ describe("InvestNFT", function() {
     expect(await gateway.callStatic.poolsWeights(autoCompoundAddr)).to.equal(ethers.utils.parseUnits("570"))
   })
 
-  it("NFT TokenInfo must be updated after redeemed", async () => {
-    await erc721byTokenA.connect(receiver).approve(gateway.address, 1)
-    await gateway.connect(receiver).redeem(erc721byTokenA.address, 1, 1)
-    expect (await erc721byTokenA.balanceOf(receiverAddr)).to.equal(1)
-
-    await erc721byTokenA.connect(receiver).approve(gateway.address, 2)
-    await gateway.connect(receiver).redeem(erc721byTokenA.address, 2, 1)
-    expect (await erc721byTokenA.balanceOf(receiverAddr)).to.equal(0)
-
-    expect (await erc721byTokenA.balanceOf(gateway.address)).to.equal(2)
-    expect(await gateway.callStatic.poolsWeights(autoCompoundAddr)).to.equal(ethers.utils.parseUnits("480"))
-
-    await erc721byTokenB.connect(receiver).approve(gateway.address, 1)
-    await gateway.connect(receiver).redeem(erc721byTokenB.address, 1, 1)
-    expect (await erc721byTokenB.balanceOf(receiverAddr)).to.equal(11)
-
-    await erc721byTokenB.connect(receiver).approve(gateway.address, 2)
-    await gateway.connect(receiver).redeem(erc721byTokenB.address, 2, 1)
-    expect (await erc721byTokenB.balanceOf(receiverAddr)).to.equal(10)
-
-    expect (await erc721byTokenB.balanceOf(gateway.address)).to.equal(2)
-    expect(await gateway.callStatic.poolsWeights(autoCompoundAddr)).to.equal(ethers.utils.parseUnits("400"))
-
-    await busd.connect(receiver).approve(erc721byTokenA.address, ethers.utils.parseUnits("100"))
-    await erc721byTokenA.connect(receiver).publicMint()
-    expect(await erc721byTokenA.callStatic.totalSupply()).to.equal(3)
-    expect(await erc721byTokenA.callStatic.balanceOf(receiverAddr)).to.equal(1)
-
-    const bva3 = await gateway.callStatic.baseValue(erc721byTokenA.address, 3, 1)
-
-    expect(bva3[0]).to.equal(ethers.utils.parseUnits("50"))
-    expect(bva3[1]).to.equal(ethers.utils.parseUnits("50"))
-    expect (await erc721byTokenA.balanceOf(receiverAddr)).to.equal(1)
-    expect(await gateway.callStatic.poolsWeights(autoCompoundAddr)).to.equal(ethers.utils.parseUnits("450"))
-
-    await erc721byTokenA.connect(receiver).approve(gateway.address, 3)
-    await gateway.connect(receiver).redeem(erc721byTokenA.address, 3, 1)
-    expect (await erc721byTokenA.balanceOf(receiverAddr)).to.equal(0)
-
-    expect(await gateway.callStatic.poolsWeights(autoCompoundAddr)).to.equal(ethers.utils.parseUnits("400"))
+  it("Pool rewards should be updated", async () => {
+    expect (await gateway.callStatic.poolsRewards(autoCompoundAddr)).to.equals(0);
+    await gateway.connect(operator).setRewards(autoCompoundAddr, ethers.utils.parseUnits("10000"))
+    expect (await gateway.callStatic.poolsRewards(autoCompoundAddr)).to.equals(ethers.utils.parseUnits("10000"));
   })
 })
