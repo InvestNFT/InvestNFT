@@ -7,7 +7,8 @@
     "compile": "npx hardhat compile",
     "test": "npx hardhat test",
     "deploy:bsc-testnet": "npx hardhat run --network bscTestnet scripts/deploy-bsc-testnet.ts",
-    "deploy:bsc": "npx hardhat run --network bsc scripts/deploy-bsc.ts"
+    "deploy:bsc": "npx hardhat run --network bsc scripts/deploy-bsc.ts",
+    "upgrade:bsc": "npx hardhat run --network bsc scripts/upgrade-bsc.ts"
   },
   "keywords": [
     "NFT"
