@@ -62,7 +62,8 @@ abstract contract BaseGatewayBNBChain is ERC721Holder, ERC1155Holder, Reentrancy
 
     uint256 public weightPowerMaximum = 3;
 
-    mapping(address => uint256) public poolsRewards;
+    mapping(address => uint256) public poolsTotalRewards;
+    mapping(address => mapping(uint256 => uint256)) public lotteryRewards;
 
     function initialize(string memory _name, address _wrapperNativeToken, address _stablecoin, address _rewardToken, address _owner, IPancakeRouter _router) virtual external {}
 
@@ -119,6 +120,10 @@ abstract contract BaseGatewayBNBChain is ERC721Holder, ERC1155Holder, Reentrancy
     }
 
     function _authorizeUpgrade(address newImplementation) internal view override onlyOwner {}
+
+    function setWeightPowerMaximum (uint256 _weight) external override onlyOwner {
+        weightPowerMaximum = _weight;
+    }
 
     modifier supportInterface(address _nft) {
         require(IERC1155(_nft).supportsInterface(INTERFACE_ID_ERC1155) || IERC721(_nft).supportsInterface(INTERFACE_ID_ERC721), "Address is not ERC1155 or ERC721");

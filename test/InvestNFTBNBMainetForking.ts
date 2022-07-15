@@ -3,7 +3,7 @@ import { ethers, network } from "hardhat"
 import { Contract, Signer } from "ethers"
 import { fastforward } from "./utils/network"
 
-describe.only("InvestNFT on bsc mainnet forking", function() {
+describe.only("InvestNFT on BNB chain mainnet forking", function() {
     let operator: Signer, operatorAddr: string
     let receiver: Signer, receiverAddr: string
     let owner: Signer
@@ -267,16 +267,16 @@ describe.only("InvestNFT on bsc mainnet forking", function() {
       expect(bvb1[0]).to.equal(ethers.utils.parseUnits("40"))
       expect(bvb1[1]).to.equal(ethers.utils.parseUnits("40"))
       expect(await gateway.callStatic.poolsWeights(autoCompoundAddr)).to.equal(ethers.utils.parseUnits("570"))
+      expect(await gateway.callStatic.poolsBalances(autoCompoundAddr)).to.equal(ethers.utils.parseUnits("570"))
     })
   
     it("Should invest with Stablecoin", async () => {
-      expect(await gateway.callStatic.poolsBalances(autoCompoundAddr)).to.equal(ethers.utils.parseUnits("570"))
       await gateway.connect(operator).investWithERC20(autoCompoundAddr, false, 0, 0, 0)
       expect(await gateway.callStatic.poolsBalances(autoCompoundAddr)).to.equal(0)
     })
 
     it("Pool rewards should be updated", async () => {
-      expect (await gateway.callStatic.poolsRewards(autoCompoundAddr)).to.equals(0)
+      expect (await gateway.callStatic.poolsTotalRewards(autoCompoundAddr)).to.equals(0)
 
       await fastforward(3600 * 12)
 
@@ -312,5 +312,15 @@ describe.only("InvestNFT on bsc mainnet forking", function() {
   
       expect (await erc721byTokenB.balanceOf(gateway.address)).to.equal(2)
       expect(await gateway.callStatic.poolsWeights(autoCompoundAddr)).to.equal(ethers.utils.parseUnits("400"))
+    })
+
+    it("VRFConsumer should be set and can draw", async () => {
+      await gateway.connect(operator).setVRFConsumer('0x7D661635105662c9B41b4D060EbfBC439236605b')
+
+      await busd.connect(receiver).approve(erc721byTokenA.address, ethers.utils.parseUnits("1000"))
+      await erc721byTokenA.connect(receiver).batchPublicMint(10)
+
+      await gateway.connect(operator).setRandomPrizeWinners(erc721byTokenA.address, 1, ethers.utils.parseUnits("100"));
+      await expect(gateway.connect(operator).setRandomPrizeWinners(erc721byTokenA.address, 1, ethers.utils.parseUnits("100"))).to.be.revertedWith("requestId be used");
     })
   })
