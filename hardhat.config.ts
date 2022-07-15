@@ -23,7 +23,7 @@ export default {
         },
         hardhat: {
             forking: {
-              url: "https://bsc-dataseed.binance.org/",
+              url: "https://bsc-dataseed3.binance.org/",
             }
         }
     },
@@ -63,6 +63,14 @@ export default {
             }, 
             {
                 version: "0.8.4",
+                settings: {
+                    optimizer: {
+                        enabled: true
+                    }
+                }
+            },
+            {
+                version: "0.8.7",
                 settings: {
                     optimizer: {
                         enabled: true
