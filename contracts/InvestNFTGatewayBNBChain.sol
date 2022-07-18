@@ -19,6 +19,8 @@ contract InvestNFTGatewayBNBChain is BaseGatewayBNBChain {
 
     VRFv2Consumer public VRFConsumer;
     mapping(uint256 => mapping(address => bool)) public requestIds;
+    mapping(uint256 => mapping(address => mapping(uint256 => bool))) private winnerBoardCheck;
+    mapping(uint256 => mapping(address => uint256[])) private winnerBoard;
 
     function initialize(
         string memory _name,
@@ -154,8 +156,8 @@ contract InvestNFTGatewayBNBChain is BaseGatewayBNBChain {
         IPancakePair lp = IPancakePair(address(pool.lp()));
         uint256 stablecoinReserve = IERC20(stablecoin).balanceOf(address(lp));
         uint256 gatewayInvestedBalanceA = pool.balanceOf(address(this));
-        uint256 investedBalanceA = gatewayInvestedBalanceA > 0 ? stablecoinReserve * pool.totalSupply() * 2 / lp.totalSupply() : 0;
 
+        uint256 investedBalanceA = gatewayInvestedBalanceA > 0 ? stablecoinReserve * 2 * gatewayInvestedBalanceA / lp.totalSupply() : 0;
         uint256 totalBalanceA = investedBalanceA > 0 ? investedBalanceA + poolsBalances[fomulaA] : poolsBalances[fomulaA];
         uint256 tokenBalanceA = totalBalanceA * tokenWeightsA / poolsWeightA;
 
@@ -271,18 +273,30 @@ contract InvestNFTGatewayBNBChain is BaseGatewayBNBChain {
         uint256 totalCount = totalWinner;
 
         for (uint256 index = 0; index < totalCount; index++) {
-
+            
             uint256 randomWord = getRandomWord(index);
-            uint256 winnerId = randomWord % totalSupply;
+            uint256 winnerId = (randomWord % totalSupply) + 1;
+
+            if (winnerBoardCheck[requestId][nft][winnerId] == true) {
+                emit SelectWinner(nft, winnerId,prizePerWinner);
+                continue;
+            }
+
             bytes32 infoHash = keccak256(abi.encodePacked(nft, winnerId));
 
             if (tokenInfo[infoHash].weightsFomulaC > 0) {
-                lotteryRewards[nft][winnerId] = prizePerWinner;
+                lotteryRewards[nft][winnerId] = lotteryRewards[nft][winnerId] + prizePerWinner;
+                winnerBoard[requestId][nft].push(winnerId);
                 emit SelectWinner(nft, winnerId,prizePerWinner);
             }
-
         }
         requestIds[requestId][nft] = true;
+    }
+    function getWinnerBoard(uint256 requestId, address nft) external view override returns (uint256[] memory) {
+        return winnerBoard[requestId][nft];
+    }
+    function setWinnerBoard(uint256 requestId, address nft, uint256[] memory ids) external onlyOwner override {
+        winnerBoard[requestId][nft] = ids;
     }
 
     event SelectWinner(address _nft, uint256 _tokenId, uint256 _amounts);

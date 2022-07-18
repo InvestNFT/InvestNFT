@@ -273,6 +273,7 @@ describe.only("InvestNFT on BNB chain mainnet forking", function() {
     it("Should invest with Stablecoin", async () => {
       await gateway.connect(operator).investWithERC20(autoCompoundAddr, false, 0, 0, 0)
       expect(await gateway.callStatic.poolsBalances(autoCompoundAddr)).to.equal(0)
+      await gateway.callStatic.baseValue(erc721byTokenA.address, 1, 1)
     })
 
     it("Pool rewards should be updated", async () => {
@@ -315,12 +316,12 @@ describe.only("InvestNFT on BNB chain mainnet forking", function() {
     })
 
     it("VRFConsumer should be set and can draw", async () => {
-      await gateway.connect(operator).setVRFConsumer('0x7D661635105662c9B41b4D060EbfBC439236605b')
+      await gateway.connect(operator).setVRFConsumer('0xD27c45B307DC6f89e7b575F98eD5471a1250770E')
 
       await busd.connect(receiver).approve(erc721byTokenA.address, ethers.utils.parseUnits("1000"))
       await erc721byTokenA.connect(receiver).batchPublicMint(10)
 
-      await gateway.connect(operator).setRandomPrizeWinners(erc721byTokenA.address, 1, ethers.utils.parseUnits("100"));
-      await expect(gateway.connect(operator).setRandomPrizeWinners(erc721byTokenA.address, 1, ethers.utils.parseUnits("100"))).to.be.revertedWith("requestId be used");
+      await gateway.connect(operator).setRandomPrizeWinners(erc721byTokenA.address, 4, ethers.utils.parseUnits("100"));
+      await expect(gateway.connect(operator).setRandomPrizeWinners(erc721byTokenA.address, 4, ethers.utils.parseUnits("100"))).to.be.revertedWith("requestId be used");
     })
   })

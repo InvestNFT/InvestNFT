@@ -34,4 +34,8 @@ interface IBaseGatewayV2 {
     function setVRFConsumer(address vrf) external;
 
     function setRandomPrizeWinners(address nft, uint256 totalWinner, uint256 prizePerWinner) external;
+
+    function getWinnerBoard(uint256 requestId, address nft) external returns (uint256[] memory);
+
+    function setWinnerBoard(uint256 requestId, address nft, uint256[] memory ids) external;
 }
