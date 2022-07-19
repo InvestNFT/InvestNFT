@@ -74,8 +74,20 @@ contract VRFv2Consumer is VRFConsumerBaseV2 {
     s_randomWords = randomWords;
   }
 
-  function updateSubscriptionId(uint64 id) external onlyOwner {
-    s_subscriptionId = id;
+  function updateKeyHash(bytes32 newKeyHash) external onlyOwner {
+    keyHash = newKeyHash;
+  }
+  function updateSubscriptionId(uint64 newId) external onlyOwner {
+    s_subscriptionId = newId;
+  }
+  function updateRequestConfirmations(uint16 newConfirmations) external onlyOwner {
+    requestConfirmations = newConfirmations;
+  }
+  function updateCallbackGasLimit(uint32 newGasLimit) external onlyOwner {
+    callbackGasLimit = newGasLimit;
+  }
+  function updateNumWords(uint32 newNumWords) external onlyOwner {
+    numWords = newNumWords;
   }
 
   function transferOwnership(address newOwner) external onlyOwner {
