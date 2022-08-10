@@ -10,7 +10,6 @@
     "deploy:bsc-testnet-vrf": "npx hardhat run --network bscTestnet scripts/deploy-bsc-testnet-vrf.ts",
     "deploy:bsc": "npx hardhat run --network bsc scripts/deploy-bsc.ts",
     "deploy:bsc-vrf": "npx hardhat run --network bsc scripts/deploy-bsc-vrf.ts"
-
   },
   "keywords": [
     "NFT"
