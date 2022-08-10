@@ -276,18 +276,12 @@ contract InvestNFTGatewayBNBChain is BaseGatewayBNBChain {
             
             uint256 randomWord = getRandomWord(index);
             uint256 winnerId = (randomWord % totalSupply) + 1;
-
-            if (winnerBoardCheck[requestId][nft][winnerId] == true) {
-                emit SelectWinner(nft, winnerId,prizePerWinner);
-                continue;
-            }
-
             bytes32 infoHash = keccak256(abi.encodePacked(nft, winnerId));
 
             if (tokenInfo[infoHash].weightsFomulaC > 0) {
                 lotteryRewards[nft][winnerId] = lotteryRewards[nft][winnerId] + prizePerWinner;
                 winnerBoard[requestId][nft].push(winnerId);
-                emit SelectWinner(nft, winnerId,prizePerWinner);
+                emit SelectWinner(nft, winnerId, prizePerWinner);
             }
         }
         requestIds[requestId][nft] = true;
@@ -298,6 +292,12 @@ contract InvestNFTGatewayBNBChain is BaseGatewayBNBChain {
     function setWinnerBoard(uint256 requestId, address nft, uint256[] memory ids) external onlyOwner override {
         winnerBoard[requestId][nft] = ids;
     }
-
+    function complementWinner(address nft, uint256 id, uint256 prizePerWinner) external onlyOwner override {
+        lotteryRewards[nft][id] = lotteryRewards[nft][id] + prizePerWinner;
+    }
+    function complementAndSetWinner(address nft, uint256 id, uint256 prizePerWinner) external onlyOwner override {
+        lotteryRewards[nft][id] = lotteryRewards[nft][id] + prizePerWinner;
+        emit SelectWinner(nft, id, prizePerWinner);
+    }
     event SelectWinner(address _nft, uint256 _tokenId, uint256 _amounts);
 }

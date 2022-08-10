@@ -38,4 +38,8 @@ interface IBaseGatewayV2 {
     function getWinnerBoard(uint256 requestId, address nft) external returns (uint256[] memory);
 
     function setWinnerBoard(uint256 requestId, address nft, uint256[] memory ids) external;
+
+    function complementWinner(address nft, uint256 id, uint256 prizePerWinner) external;
+
+    function complementAndSetWinner(address nft, uint256 id, uint256 prizePerWinner) external;
 }
