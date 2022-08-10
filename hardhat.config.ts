@@ -20,6 +20,11 @@ export default {
             url: "https://bsc-dataseed.binance.org/",
             chainId: 56,
             accounts: [bscPk]
+        },
+        hardhat: {
+            forking: {
+              url: "https://bsc-dataseed3.binance.org/",
+            }
         }
     },
     solidity: {
@@ -64,6 +69,14 @@ export default {
                     }
                 }
             },
+            {
+                version: "0.8.7",
+                settings: {
+                    optimizer: {
+                        enabled: true
+                    }
+                }
+            },
         ]
     },
     etherscan: {
@@ -82,7 +95,10 @@ export default {
         timeout: 200000
     },
     gasReporter: {
-        enabled: false
+        enabled: true,
+        outputFile: './gas-report.txt',
+        noColors: true,
+        rst: true,
     }
 }
 

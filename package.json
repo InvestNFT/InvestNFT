@@ -1,14 +1,15 @@
 {
   "name": "basevalue-gateway",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Gateway for NFT to DeFi",
   "main": "index.js",
   "scripts": {
     "compile": "npx hardhat compile",
     "test": "npx hardhat test",
     "deploy:bsc-testnet": "npx hardhat run --network bscTestnet scripts/deploy-bsc-testnet.ts",
+    "deploy:bsc-testnet-vrf": "npx hardhat run --network bscTestnet scripts/deploy-bsc-testnet-vrf.ts",
     "deploy:bsc": "npx hardhat run --network bsc scripts/deploy-bsc.ts",
-    "upgrade:bsc": "npx hardhat run --network bsc scripts/upgrade-bsc.ts"
+    "deploy:bsc-vrf": "npx hardhat run --network bsc scripts/deploy-bsc-vrf.ts"
   },
   "keywords": [
     "NFT"
@@ -16,6 +17,7 @@
   "author": "Bincentive",
   "license": "ISC",
   "devDependencies": {
+    "@chainlink/contracts": "^0.4.1",
     "@nomiclabs/hardhat-ethers": "^2.0.5",
     "@nomiclabs/hardhat-etherscan": "^3.0.3",
     "@nomiclabs/hardhat-waffle": "^2.0.3",
