@@ -1,12 +1,12 @@
-import { ethers, network } from "hardhat"
-import { BigNumber, Contract, Signer, Wallet } from "ethers"
+import { ethers } from "hardhat"
+import { Contract, Signer } from "ethers"
 
 async function main() {
-  let gatewayImpl: Contract, gateway: Contract
+  let gatewayImpl: Contract
   let operator: Signer
   operator = ethers.provider.getSigner()
   gatewayImpl = await (
-      await ethers.getContractFactory("InvestNFTGatewayBNBChain", operator)
+      await ethers.getContractFactory("InvestNFTGateway", operator)
   ).deploy()
   await gatewayImpl.deployed();
 

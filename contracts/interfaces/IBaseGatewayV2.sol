@@ -15,6 +15,8 @@ interface IBaseGatewayV2 {
 
     function baseValue(address _nft, uint256 _tokenId, uint256 _amount) external view returns (uint256, uint256);
 
+    function tokenReward(address _nft, uint256 _tokenId, uint256 _amount) external view returns (uint256);
+
     function redeem(address _nft, uint256 _tokenId, uint256 _amount, bool _isToken0) external;
 
     function withdraw(address _to) external;
@@ -26,4 +28,18 @@ interface IBaseGatewayV2 {
     function investWithERC20(address pool, bool isToken0, uint256 minReceivedTokenAmountSwap, uint256 minToken0AmountAddLiq, uint256 minToken1AmountAddLiq) external;
 
     function getReward(address pool) external;
+
+    function setWeightPowerMaximum (uint256 _weight) external;
+
+    function setVRFConsumer(address vrf) external;
+
+    function setRandomPrizeWinners(address nft, uint256 totalWinner, uint256 prizePerWinner) external;
+
+    function getWinnerBoard(uint256 requestId, address nft) external returns (uint256[] memory);
+
+    function setWinnerBoard(uint256 requestId, address nft, uint256[] memory ids) external;
+
+    function complementWinner(address nft, uint256 id, uint256 prizePerWinner) external;
+
+    function complementAndSetWinner(address nft, uint256 id, uint256 prizePerWinner) external;
 }

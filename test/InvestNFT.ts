@@ -286,8 +286,8 @@ describe("InvestNFT", function() {
   })
 
   it("Pool rewards should be updated", async () => {
-    expect (await gateway.callStatic.poolsRewards(autoCompoundAddr)).to.equals(0);
+    expect (await gateway.callStatic.poolsTotalRewards(autoCompoundAddr)).to.equals(0);
     await gateway.connect(operator).setRewards(autoCompoundAddr, ethers.utils.parseUnits("10000"))
-    expect (await gateway.callStatic.poolsRewards(autoCompoundAddr)).to.equals(ethers.utils.parseUnits("10000"));
+    expect (await gateway.callStatic.poolsTotalRewards(autoCompoundAddr)).to.equals(ethers.utils.parseUnits("10000"));
   })
 })

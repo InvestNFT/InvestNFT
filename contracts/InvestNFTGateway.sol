@@ -101,7 +101,7 @@ contract InvestNFTGateway is BaseGateway {
             poolsWeights[fomulaA] = poolsWeights[fomulaA] + _depositTokenAmounts;
             for (uint i = 0; i < _offset; i++) {
                 updateInfo(msg.sender, _idFrom + i, 1, depositTokenAmount);
-                emit Deposit(msg.sender, _idFrom, 1, depositTokenAmount);
+                emit Deposit(msg.sender, _idFrom + i, 1, depositTokenAmount);
             }
         } else {
         // non-stablecoin
@@ -121,8 +121,8 @@ contract InvestNFTGateway is BaseGateway {
         bytes32 infoHash = keccak256(abi.encodePacked(_nft, _tokenId));
         // update token info
         tokenInfo[infoHash].weightsFomulaA = tokenInfo[infoHash].weightsFomulaA + _weight;
-        tokenInfo[infoHash].weightsFomulaB = BASE_WEIGHTS;
-        tokenInfo[infoHash].weightsFomulaC = BASE_WEIGHTS;
+        tokenInfo[infoHash].weightsFomulaB = tokenInfo[infoHash].weightsFomulaB + BASE_WEIGHTS;
+        tokenInfo[infoHash].weightsFomulaC = tokenInfo[infoHash].weightsFomulaB + BASE_WEIGHTS;
         tokenInfo[infoHash].amounts = tokenInfo[infoHash].amounts + _amount;
 
         // update contract info

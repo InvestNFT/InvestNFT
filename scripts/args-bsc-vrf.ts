@@ -1,0 +1,8 @@
+export default [
+  105,
+  '0xc587d9053cd1118f25f645f9e08bb98c9712a4ee',
+  '0x114f3da0a805b6a67d6e9cd2ec746f7028f1b7376365af575cfea3550dd1aa04',
+  500000,
+  3,
+  4
+]
