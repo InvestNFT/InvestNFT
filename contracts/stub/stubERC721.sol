@@ -13,7 +13,8 @@ import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import "@openzeppelin/contracts/utils/Context.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 
-import "../interfaces/IBaseGateway.sol";
+import "../interfaces/IBaseGatewayEthereum.sol";
+import "hardhat/console.sol";
 
 contract stubERC721 is Ownable, ERC721Enumerable {
     using MerkleProof for bytes32[];
@@ -26,7 +27,6 @@ contract stubERC721 is Ownable, ERC721Enumerable {
     bytes32 immutable private PRE_FREE_LIST;
 
     uint256 public price = 0.1 ether;
-    uint256 constant private FREE_MINTED_PRICE = 0.05 ether;
 
     mapping(address => bool) public whitelist;
     mapping(address => bool) public freeMintList;
@@ -44,10 +44,10 @@ contract stubERC721 is Ownable, ERC721Enumerable {
 
     string private metadataURI;
 
-    IBaseGateway public gateway;
+    IBaseGatewayEthereum public gateway;
 
     event Withdraw(address _address, uint256 balance);
-    event Initialize(IBaseGateway _gateway);
+    event Initialize(IBaseGatewayEthereum _gateway);
     event SetContractDataURI(string _contractDataURI);
     event SetURI(string _uri);
     event MetadataFrozen();
@@ -79,7 +79,7 @@ contract stubERC721 is Ownable, ERC721Enumerable {
         return !(address(gateway) == address(0));
     }
 
-    function initialize(IBaseGateway _gateway) onlyOwner external {
+    function initialize(IBaseGatewayEthereum _gateway) onlyOwner external {
         require(!_initialized(), "Already initialized");
         gateway = _gateway;
         emit Initialize(_gateway);
@@ -204,16 +204,16 @@ contract stubERC721 is Ownable, ERC721Enumerable {
     }
 
     function publicMint() hasInitialized canMint(1) external payable {
-        require(msg.value >= 0.1 ether, "Insufficent amount");
+        require(msg.value >= price, "Insufficent amount for publicMint");
         uint256 investPrice = msg.value * BASE_VALUE_PERCENTAGE / 100;
         uint256 id = totalSupply() + 1;
         mint(id);
-        gateway.deposit{ value: investPrice }(id, 1);
+        gateway.deposit{ value: investPrice }(id);
     }
 
     function batchPublicMint(uint256 _numberTokens) hasInitialized canMint(_numberTokens) external payable {
-        uint256 unitPrice = 0.1 ether;
-        require(msg.value >= unitPrice * _numberTokens, "Insufficent amount");
+        uint256 unitPrice = price;
+        require(msg.value >= unitPrice * _numberTokens, "Insufficent amount for batchPublicMint");
         uint256 investPrice = msg.value * BASE_VALUE_PERCENTAGE / 100;
         uint256 id = totalSupply() + 1;
 

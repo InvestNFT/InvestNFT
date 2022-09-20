@@ -16,4 +16,6 @@ interface IWETH {
         address dst,
         uint256 wad
     ) external returns (bool);
+
+    function approve(address spender, uint256 amount) external returns (bool);
 }

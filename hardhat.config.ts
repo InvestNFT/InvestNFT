@@ -3,7 +3,7 @@ import "@nomiclabs/hardhat-ethers"
 import "hardhat-gas-reporter"
 import "@nomiclabs/hardhat-etherscan"
 
-import { bscTestPk, bscPk, bscscanApiKey } from './secrets.json';
+import { bscTestPk, bscPk, bscscanApiKey, etherscanApiKey, alchemyApiKey } from './secrets.json';
 
 export default {
     networks: {
@@ -21,9 +21,14 @@ export default {
             chainId: 56,
             accounts: [bscPk]
         },
+        ethereum: {
+            url: `https://eth-mainnet.g.alchemy.com/v2/${alchemyApiKey}`,
+            chainId: 1,
+            accounts: [bscPk]
+        },
         hardhat: {
             forking: {
-              url: "https://bsc-dataseed3.binance.org/",
+              url: `https://eth-mainnet.g.alchemy.com/v2/${alchemyApiKey}`,
             }
         }
     },
@@ -77,12 +82,21 @@ export default {
                     }
                 }
             },
+            {
+                version: "0.8.10",
+                settings: {
+                    optimizer: {
+                        enabled: true
+                    }
+                }
+            },
         ]
     },
     etherscan: {
         apiKey: {
             bscTestnet: bscscanApiKey,
-            bsc: bscscanApiKey
+            bsc: bscscanApiKey,
+            mainnet: etherscanApiKey
         }
     },
     paths: {

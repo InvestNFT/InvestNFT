@@ -3,7 +3,7 @@ import { ethers, network } from "hardhat"
 import { Contract, Signer } from "ethers"
 import { fastforward } from "./utils/network"
 
-describe.only("InvestNFT on BNB chain mainnet forking", function() {
+describe("InvestNFT on BNB chain mainnet forking", function() {
     let operator: Signer, operatorAddr: string
     let receiver: Signer, receiverAddr: string
     let owner: Signer
