@@ -1,7 +1,6 @@
 import { expect } from "chai"
 import { ethers, network } from "hardhat"
 import { Contract, Signer } from "ethers"
-import { fastforward } from "./utils/network"
 
 describe.only("InvestNFT on Ethereum mainnet forking", function() {
     let operator: Signer, operatorAddr: string
@@ -96,6 +95,7 @@ describe.only("InvestNFT on Ethereum mainnet forking", function() {
           bcntAddr,
           operatorAddr,
           routerAddr,
+          1680278400,
       ])
       gateway = await (
           await ethers.getContractFactory("UpgradeProxy", operator)
@@ -104,13 +104,13 @@ describe.only("InvestNFT on Ethereum mainnet forking", function() {
           gatewayInitData
       )
       gateway = gatewayImpl.attach(gateway.address)
-      expect(await gateway.callStatic.implementation()).to.equal(gatewayImpl.address)
-      expect(await gateway.callStatic.name()).to.equal(gatewayName)
-      expect(await gateway.callStatic.wrapperNativeToken()).to.equal(wethAddr)
-      expect(await gateway.callStatic.stablecoin()).to.equal(usdcAddr)
-      expect(await gateway.callStatic.rewardToken()).to.equal(bcntAddr)
-      expect(await gateway.callStatic.operator()).to.equal(operatorAddr)
-      expect(await gateway.callStatic.router()).to.equal(routerAddr)
+      expect(await gateway.implementation()).to.equal(gatewayImpl.address)
+      expect(await gateway.name()).to.equal(gatewayName)
+      expect(await gateway.wrapperNativeToken()).to.equal(wethAddr)
+      expect(await gateway.stablecoin()).to.equal(usdcAddr)
+      expect(await gateway.rewardToken()).to.equal(bcntAddr)
+      expect(await gateway.operator()).to.equal(operatorAddr)
+      expect(await gateway.router()).to.equal(routerAddr)
   
       // Transfer ether to owner
       await operator.sendTransaction({to: ownerAddr, value: ethers.utils.parseUnits('100')})
@@ -123,15 +123,14 @@ describe.only("InvestNFT on Ethereum mainnet forking", function() {
   
       const contractURI = "ipfs://QmYnjGeLbBhfDM8Y11F5hVMDdGQz91dFCroHT8eiygnXxC/contract.json"
       const blindBoxURI = "ipfs://QmX5CnSJjtunPUp67DwVYUBgPYR2PB18M6riqPa3vercUp/"
-      const whitelist = ethers.utils.formatBytes32String("test")
-      const freeMintList = ethers.utils.formatBytes32String("test")
-  
+      const whitelist = ethers.utils.formatBytes32String("[]")
+
       erc721PayableA = await (
           await ethers.getContractFactory("stubERC721", operator)
-      ).deploy(contractURI, blindBoxURI, whitelist, freeMintList);
+      ).deploy(contractURI, blindBoxURI, '', whitelist);
   
       await erc721PayableA.connect(operator).initialize(gateway.address)
-      expect(await erc721PayableA.callStatic.gateway()).to.equal(gateway.address)
+      expect(await erc721PayableA.gateway()).to.equal(gateway.address)
   
       await gateway.connect(operator).initNftData(erc721PayableA.address, stakeAddr, zeroAddress, false, 10)
 
@@ -147,6 +146,7 @@ describe.only("InvestNFT on Ethereum mainnet forking", function() {
           bcnt.address,
           operatorAddr,
           swapRouter.address,
+          1680278400,
       )).to.be.revertedWith("Already initialized")
     })
   
@@ -169,15 +169,14 @@ describe.only("InvestNFT on Ethereum mainnet forking", function() {
   
       const contractURI = "ipfs://QmYnjGeLbBhfDM8Y11F5hVMDdGQz91dFCroHT8eiygnXxC/contract.json"
       const blindBoxURI = "ipfs://QmX5CnSJjtunPUp67DwVYUBgPYR2PB18M6riqPa3vercUp/"
-      const whitelist = ethers.utils.formatBytes32String("test")
-      const freeMintList = ethers.utils.formatBytes32String("test")
+      const whitelist = ethers.utils.formatBytes32String("[]")
   
       erc721PayableB = await (
           await ethers.getContractFactory("stubERC721", operator)
-      ).deploy(contractURI, blindBoxURI, whitelist, freeMintList);
+      ).deploy(contractURI, blindBoxURI, '', whitelist);
   
       await erc721PayableB.connect(operator).initialize(gateway.address)
-      expect(await erc721PayableB.callStatic.gateway()).to.equal(gateway.address)
+      expect(await erc721PayableB.gateway()).to.equal(gateway.address)
   
       await gateway.connect(operator).initNftData(erc721PayableB.address, stakeAddr, zeroAddress, false, 10)
     })
@@ -186,105 +185,104 @@ describe.only("InvestNFT on Ethereum mainnet forking", function() {
       const price = ethers.utils.parseUnits("0.1")
 
       //NFT A contract mint
-      await erc721PayableA.connect(receiver).publicMint({ value: price })
-      expect(await erc721PayableA.callStatic.totalSupply()).to.equal(1)
-      expect(await erc721PayableA.callStatic.balanceOf(receiverAddr)).to.equal(1)
+      await erc721PayableA.connect(receiver).mint(1, [], { value: price })
+      expect(await erc721PayableA.totalSupply()).to.equal(1)
+      expect(await erc721PayableA.balanceOf(receiverAddr)).to.equal(1)
   
       // tokenId: 1 baseValue
-      const bva1 = await gateway.callStatic.baseValue(erc721PayableA.address, 1)
+      const bva1 = await gateway.baseValue(erc721PayableA.address, 1)
   
-      expect(await gateway.callStatic.poolsWeights(stakeAddr)).to.equal(bva1[0])
+      expect(await gateway.poolsWeights(stakeAddr)).to.equal(bva1[0])
   
-      // NFT A updated price
-      const nextPrice = ethers.utils.parseUnits("0.2")
-      await erc721PayableA.connect(operator).setPrice(nextPrice)
   
       // approve stablecoin to NFT contract and mint
-      await usdc.connect(receiver).approve(erc721PayableA.address, nextPrice)
-      await erc721PayableA.connect(receiver).publicMint({ value: nextPrice })
-      expect(await erc721PayableA.callStatic.totalSupply()).to.equal(2)
+      await usdc.connect(receiver).approve(erc721PayableA.address, price)
+      await erc721PayableA.connect(receiver).mint(1, [], { value: price })
+      expect(await erc721PayableA.totalSupply()).to.equal(2)
   
-      expect(await erc721PayableA.callStatic.balanceOf(receiverAddr)).to.equal(2)
-      expect(await erc721PayableA.callStatic.tokenByIndex(0)).to.equal(1)
-      expect(await erc721PayableA.callStatic.tokenByIndex(1)).to.equal(2)
+      expect(await erc721PayableA.balanceOf(receiverAddr)).to.equal(2)
+      expect(await erc721PayableA.tokenByIndex(0)).to.equal(1)
+      expect(await erc721PayableA.tokenByIndex(1)).to.equal(2)
   
       // tokenId: 2 baseValue
-      const bva2 = await gateway.callStatic.baseValue(erc721PayableA.address, 2)
+      const bva2 = await gateway.baseValue(erc721PayableA.address, 2)
   
       expect(bva2[1]).to.equal(0)
   
       // approve stablecoin to NFT contract and mint
       const batchPriceB = ethers.utils.parseUnits("1")
-      await erc721PayableB.connect(receiver).publicMint({ value: price })
-      await erc721PayableB.connect(receiver).batchPublicMint(1, { value: price })
-      await erc721PayableB.connect(receiver).batchPublicMint(10, { value: batchPriceB })
-      expect(await erc721PayableB.callStatic.totalSupply()).to.equal(12)
-      expect(await erc721PayableB.callStatic.balanceOf(receiverAddr)).to.equal(12)
-      expect(await erc721PayableB.callStatic.tokenByIndex(0)).to.equal(1)
+      await erc721PayableB.connect(receiver).mint(1, [], { value: price })
+      await erc721PayableB.connect(receiver).mint(10, [], { value: batchPriceB })
+      expect(await erc721PayableB.totalSupply()).to.equal(11)
+      expect(await erc721PayableB.balanceOf(receiverAddr)).to.equal(11)
+      expect(await erc721PayableB.tokenByIndex(0)).to.equal(1)
   
-      const bvb1 = await gateway.callStatic.baseValue(erc721PayableB.address, 1)
+      const bvb1 = await gateway.baseValue(erc721PayableB.address, 1)
   
       expect(bvb1[1]).to.equal(0)
     })
   
     it("Should invest with Stablecoin", async () => {
       await gateway.connect(operator).investWithERC20(stakeAddr, false, 0)
-      expect(await gateway.callStatic.poolsBalances(stakeAddr)).to.equal(0)
-
-      const bva1 = await gateway.callStatic.baseValue(erc721PayableA.address, 1)
-      const bva2 = await gateway.callStatic.baseValue(erc721PayableA.address, 2)
-      const bvb1 = await gateway.callStatic.baseValue(erc721PayableB.address, 1)
-      const bvb2 = await gateway.callStatic.baseValue(erc721PayableB.address, 2)
-      console.log(bva1[0], bva1[1])
-      console.log(bva2[0], bva2[1])
-      console.log(bvb1[0], bvb1[1])
-      console.log(bvb2[0], bvb2[1])
+      expect(await gateway.poolsBalances(stakeAddr)).to.equal(0)
     })
 
     it("Pool rewards should be updated", async () => {
-      expect (await gateway.callStatic.poolsTotalRewards(stakeAddr)).to.equals(0)
+      expect (await gateway.poolsTotalRewards(stakeAddr)).to.equals(0)
 
       await gateway.connect(operator).getReward(stakeAddr)
     })
 
-    it("NFT TokenInfo should be updated after redeemed", async () => {
-  
-      console.log(await gateway.callStatic.poolsWeights(stakeAddr))
+    it("Can't be redeemed before Redeemable Time",async () => {
       await erc721PayableA.connect(receiver).approve(gateway.address, 1)
+      await expect(gateway.connect(receiver).redeem(erc721PayableA.address, 1, false)).to.be.revertedWith("Redeemable until redeemableTime");
+    })
+
+    it("NFT TokenInfo should be updated after redeemed", async () => {
+      await gateway.connect(operator).setRedeemableTime(1663872500);
+
+      const bva1 = await gateway.baseValue(erc721PayableA.address, 1)
+      const bvb1 = await gateway.baseValue(erc721PayableB.address, 1)
+
+      const beforeRedeemWeight = await gateway.poolsWeights(stakeAddr);
+
       await gateway.connect(receiver).redeem(erc721PayableA.address, 1, false)
       expect (await erc721PayableA.balanceOf(receiverAddr)).to.equal(1)
-      console.log(await gateway.callStatic.poolsWeights(stakeAddr))
-      const bva1 = await gateway.callStatic.baseValue(erc721PayableA.address, 1)
-      expect(bva1[0]).to.equal(0);
-      expect(bva1[1]).to.equal(0);
-      await erc721PayableA.connect(receiver).approve(gateway.address, 2)
-      await gateway.connect(receiver).redeem(erc721PayableA.address, 2, false)
-      expect (await erc721PayableA.balanceOf(receiverAddr)).to.equal(0)
-      console.log(await gateway.callStatic.poolsWeights(stakeAddr))
+      
+      const afterA1RedeemedWeight = await gateway.poolsWeights(stakeAddr);
+      expect(beforeRedeemWeight - afterA1RedeemedWeight).to.equal(bva1[0]);
 
-      expect (await erc721PayableA.balanceOf(gateway.address)).to.equal(2)
+      expect (await erc721PayableA.balanceOf(gateway.address)).to.equal(1)
   
       await erc721PayableB.connect(receiver).approve(gateway.address, 1)
       await gateway.connect(receiver).redeem(erc721PayableB.address, 1, false)
-      expect (await erc721PayableB.balanceOf(receiverAddr)).to.equal(11)
-      console.log(await gateway.callStatic.poolsWeights(stakeAddr))
-
-      await erc721PayableB.connect(receiver).approve(gateway.address, 2)
-      await gateway.connect(receiver).redeem(erc721PayableB.address, 2, false)
       expect (await erc721PayableB.balanceOf(receiverAddr)).to.equal(10)
-      console.log(await gateway.callStatic.poolsWeights(stakeAddr))
+      const afterB1RedeemedWeight = await gateway.poolsWeights(stakeAddr);
+      expect(afterA1RedeemedWeight - afterB1RedeemedWeight).to.equal(bvb1[0]);
 
-      expect (await erc721PayableB.balanceOf(gateway.address)).to.equal(2)
+      expect (await erc721PayableB.balanceOf(gateway.address)).to.equal(1);
     })
 
     it("VRFConsumer should be set and can draw", async () => {
+      await gateway.connect(operator).getReward(stakeAddr);
+
       await gateway.connect(operator).setVRFConsumer('0x58437Fd814ea38590340ba2EDE1592D587B63875')
 
-      const batchPrice = ethers.utils.parseUnits("2")
+      const batchPrice = ethers.utils.parseUnits("0.5")
 
-      await erc721PayableA.connect(receiver).batchPublicMint(10, { value: batchPrice })
+      await erc721PayableA.connect(receiver).mint(5, [], { value: batchPrice })
 
-      await gateway.connect(operator).setRandomPrizeWinners(erc721PayableA.address, 4, ethers.utils.parseUnits("100"));
-      await expect(gateway.connect(operator).setRandomPrizeWinners(erc721PayableA.address, 4, ethers.utils.parseUnits("100"))).to.be.revertedWith("requestId be used");
+      await gateway.connect(operator).setRandomPrizeWinners(erc721PayableA.address, 2);
+
+      const requestId = await gateway.getRequestId();
+
+      const winners = await gateway.getWinnerBoard(requestId);
+
+      winners.forEach(async (winner) => {
+        const hash = await gateway.lotteryList(winner);
+        console.log( await gateway.tokenLotteryInfo(hash));
+      });
+
+      await expect(gateway.connect(operator).setRandomPrizeWinners(erc721PayableA.address, 1)).to.be.revertedWith("requestId be used");
     })
   })

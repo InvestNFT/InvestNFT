@@ -1,6 +1,6 @@
 {
   "name": "basevalue-gateway",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Gateway for NFT to DeFi",
   "main": "index.js",
   "scripts": {
@@ -10,6 +10,7 @@
     "deploy:bsc-testnet-vrf": "npx hardhat run --network bscTestnet scripts/deploy-bsc-testnet-vrf.ts",
     "deploy:bsc": "npx hardhat run --network bsc scripts/deploy-bsc.ts",
     "deploy:bsc-vrf": "npx hardhat run --network bsc scripts/deploy-bsc-vrf.ts",
+    "deploy:ethereum": "npx hardhat run --network ethereum scripts/deploy-ethereum.ts",
     "deploy:ethereum-vrf": "npx hardhat run --network ethereum scripts/deploy-ethereum-vrf.ts"
   },
   "keywords": [
@@ -38,5 +39,8 @@
     "solhint-plugin-prettier": "^0.0.5",
     "ts-node": "^10.7.0",
     "typescript": "^4.6.2"
+  },
+  "dependencies": {
+    "merkletreejs": "^0.2.32"
   }
 }

@@ -13,7 +13,6 @@ import "./upgrade/ReentrancyGuard.sol";
 import "./interfaces/IUniswapV3SwapRouter.sol";
 import "./interfaces/IWeth.sol";
 import "./interfaces/IBaseGatewayEthereum.sol";
-import "hardhat/console.sol";
 
 abstract contract BaseGatewayEthereum is ERC721Holder, ERC1155Holder, ReentrancyGuard, Pausable, UUPSUpgradeable, IBaseGatewayEthereum {
     using SafeERC20 for IERC20;
@@ -57,12 +56,7 @@ abstract contract BaseGatewayEthereum is ERC721Holder, ERC1155Holder, Reentrancy
     address public operator;
     IUniswapV3SwapRouter public router;
 
-    uint256 public weightPowerMaximum = 3;
-
-    mapping(address => uint256) public poolsTotalRewards;
-    mapping(address => mapping(uint256 => uint256)) public lotteryRewards;
-
-    function initialize(string memory _name, address _wrapperNativeToken, address _stablecoin, address _rewardToken, address _owner, IUniswapV3SwapRouter _router) virtual external {}
+    function initialize(string memory _name, address _wrapperNativeToken, address _stablecoin, address _rewardToken, address _owner, IUniswapV3SwapRouter _router, uint256 _redeemableTime) virtual external {}
 
     function implementation() external view returns (address) {
         return _getImplementation();
@@ -110,10 +104,6 @@ abstract contract BaseGatewayEthereum is ERC721Holder, ERC1155Holder, Reentrancy
     }
 
     function _authorizeUpgrade(address newImplementation) internal view override onlyOwner {}
-
-    function setWeightPowerMaximum (uint256 _weight) external override onlyOwner {
-        weightPowerMaximum = _weight;
-    }
 
     modifier supportInterface(address _nft) {
         require(IERC721(_nft).supportsInterface(INTERFACE_ID_ERC721), "Address is not ERC1155 or ERC721");

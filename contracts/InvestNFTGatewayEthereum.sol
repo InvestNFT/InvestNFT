@@ -11,18 +11,26 @@ import "./interfaces/IWeth.sol";
 import "./BaseGatewayEthereum.sol";
 import "./hotpot/StakeCurveConvex.sol";
 import "./LotteryVRF.sol";
-import "./interfaces/ERC721PayWithERC20.sol";
+import "./interfaces/ERC721PayWithEther.sol";
 import "./interfaces/IPancakePair.sol";
 import "./compound/interfaces/ICurvePool.sol";
 
 contract InvestNFTGatewayEthereum is BaseGatewayEthereum {
     using SafeERC20 for IERC20;
 
+    struct TokenLotteryInfo {
+        address nft;
+        uint256 id;
+    }
+    mapping(address => uint256) public poolsTotalRewards;
+    mapping(address => mapping(uint256 => uint256)) public lotteryRewards;
+    bytes32[] public lotteryList;
+    mapping(bytes32 => TokenLotteryInfo) public tokenLotteryInfo;
     VRFv2Consumer public VRFConsumer;
     mapping(uint256 => mapping(address => bool)) public requestIds;
-    mapping(uint256 => mapping(address => mapping(uint256 => bool))) private winnerBoardCheck;
-    mapping(uint256 => mapping(address => uint256[])) private winnerBoard;
+    mapping(uint256 => uint256[]) private winnerBoard;
     mapping(address => address) private hotpotPoolToCurvePool;
+    uint256 public redeemableTime;
 
     function initialize(
         string memory _name,
@@ -30,7 +38,8 @@ contract InvestNFTGatewayEthereum is BaseGatewayEthereum {
         address _stablecoin,
         address _rewardToken,
         address _operator,
-        IUniswapV3SwapRouter _router
+        IUniswapV3SwapRouter _router,
+        uint256 _redeemableTime
     ) external override {
         require(keccak256(abi.encodePacked(name)) == keccak256(abi.encodePacked("")), "Already initialized");
         super.initializePausable(_operator);
@@ -42,11 +51,16 @@ contract InvestNFTGatewayEthereum is BaseGatewayEthereum {
         rewardToken= _rewardToken;
         operator = _operator;
         router = _router;
+        redeemableTime = _redeemableTime;
     }
 
     function initNftData(address _nft, address _poolBase, address _poolLottery, bool _increaseable, uint256 _delta) external onlyOwner override {
-        if (_poolBase != address(0)) contractInfo[_nft].poolAddressBase = _poolBase;
-        if (_poolLottery != address(0)) contractInfo[_nft].poolAddressLottery = _poolLottery;
+        if (_poolBase != address(0)) {
+            contractInfo[_nft].poolAddressBase = _poolBase;
+        }
+        if (_poolLottery != address(0)) {
+            contractInfo[_nft].poolAddressLottery = _poolLottery;
+        }
         contractInfo[_nft].increaseable = _increaseable;
         contractInfo[_nft].delta = _delta;
         contractInfo[_nft].active = true;
@@ -97,9 +111,15 @@ contract InvestNFTGatewayEthereum is BaseGatewayEthereum {
         contractInfo[_nft].weightsFomulaBase = contractInfo[_nft].weightsFomulaBase + _weight;
         contractInfo[_nft].weightsFomulaLottery = contractInfo[_nft].weightsFomulaLottery + BASE_WEIGHTS;
         contractInfo[_nft].amounts = contractInfo[_nft].amounts + 1;
+
+        TokenLotteryInfo memory info;
+        info.nft = _nft;
+        info.id = _tokenId;
+        tokenLotteryInfo[infoHash] = info;
+        lotteryList.push(infoHash);
     }
 
-    function baseValue(address _nft, uint256 _tokenId) public supportInterface(_nft) view override returns (uint256, uint256) {
+    function baseValue(address _nft, uint256 _tokenId) public view override returns (uint256, uint256) {
         bytes32 infoHash = keccak256(abi.encodePacked(_nft, _tokenId));
         address fomulaBase =  contractInfo[_nft].poolAddressBase;
         uint256 tokenWeightsBase = tokenInfo[infoHash].weightsFomulaBase;
@@ -116,17 +136,13 @@ contract InvestNFTGatewayEthereum is BaseGatewayEthereum {
         return (tokenWeightsBase, tokenBalanceBase);
     }
 
-    function tokenReward(address _nft, uint256 _tokenId) public supportInterface(_nft) view override returns (uint256)  {
-        bytes32 infoHash = keccak256(abi.encodePacked(_nft, _tokenId));
-        address fomulaBase =  contractInfo[_nft].poolAddressBase;
-        uint256 simpleRewardAmount = poolsTotalRewards[fomulaBase] > 0 ? 
-            poolsTotalRewards[fomulaBase] * tokenInfo[infoHash].weightsFomulaBase / poolsWeights[fomulaBase] / tokenInfo[infoHash].amounts :
-            0;
-        uint256 reward = lotteryRewards[_nft][_tokenId] + simpleRewardAmount;
-        return reward;
+    function tokenReward(address _nft, uint256 _tokenId) public view override returns (uint256)  {
+        return lotteryRewards[_nft][_tokenId];
     }
 
     function redeem(address _nft, uint256 _tokenId, bool _isToken0) external override {
+        require(block.timestamp >= redeemableTime, "Redeemable until redeemableTime");
+
         bytes32 infoHash = keccak256(abi.encodePacked(_nft, _tokenId));
         address fomulaBase =  contractInfo[_nft].poolAddressBase;
         address fomulaLottery =  contractInfo[_nft].poolAddressLottery;
@@ -159,12 +175,13 @@ contract InvestNFTGatewayEthereum is BaseGatewayEthereum {
         
         IERC20(stablecoin).safeTransfer(msg.sender, tokenBalanceBase);
 
-        uint256 simpleRewardAmount;
-        if (poolsTotalRewards[fomulaBase] > 0) {
-            simpleRewardAmount = poolsTotalRewards[fomulaBase] * tokenInfo[infoHash].weightsFomulaBase / poolsWeights[fomulaBase];
-            poolsTotalRewards[_nft] = poolsTotalRewards[_nft] - simpleRewardAmount;
+        uint256 lotteryRewardAmount = lotteryRewards[_nft][_tokenId];
+
+        if (lotteryRewardAmount > 0) {
+            lotteryRewards[_nft][_tokenId] = 0;
+
+            IERC20(rewardToken).safeTransfer(msg.sender, lotteryRewardAmount);
         }
-        IERC20(rewardToken).safeTransfer(msg.sender, simpleRewardAmount + lotteryRewards[_nft][_tokenId]);
 
         emit Redeem(msg.sender, _tokenId, tokenBalanceBase);
     }
@@ -194,7 +211,7 @@ contract InvestNFTGatewayEthereum is BaseGatewayEthereum {
         VRFConsumer = VRFv2Consumer(vrf);
     }
 
-    function getNFTTotalSupply(ERC721PayWithERC20 _nft) internal view returns (uint256) {
+    function getNFTTotalSupply(ERC721PayWithEther _nft) internal view returns (uint256) {
         return _nft.totalSupply();
     }
 
@@ -202,43 +219,39 @@ contract InvestNFTGatewayEthereum is BaseGatewayEthereum {
         return VRFConsumer.s_randomWords(_index);
     }
 
-    function getRequestId() internal view returns (uint256) {
+    function getRequestId() public view override returns (uint256) {
         return VRFConsumer.s_requestId();
     }
 
-    function setRandomPrizeWinners(address nft, uint256 totalWinner, uint256 prizePerWinner) external onlyOwner override {
+    function setRandomPrizeWinners(address pool, uint256 totalWinner) external onlyOwner override {
         uint256 requestId = getRequestId();
-        require(requestIds[requestId][nft] == false, "requestId be used");
+        require(requestIds[requestId][pool] == false, "requestId be used");
 
-        uint256 totalSupply = getNFTTotalSupply(ERC721PayWithERC20(nft));
-        uint256 totalCount = totalWinner;
+        uint256 totalCandidate = lotteryList.length;
+        uint256 prizePerWinner = poolsTotalRewards[pool] > 0 ? poolsTotalRewards[pool] / totalWinner : 0;
 
-        for (uint256 index = 0; index < totalCount; index++) {
-            
+        uint256 prizeTotal;
+        for (uint256 index = 0; index < totalWinner; index++) {
+
             uint256 randomWord = getRandomWord(index);
-            uint256 winnerId = (randomWord % totalSupply) + 1;
-            bytes32 infoHash = keccak256(abi.encodePacked(nft, winnerId));
+            uint256 winnerIndex = randomWord % totalCandidate;
+            bytes32 winnerInfoHash = lotteryList[winnerIndex];
+            TokenLotteryInfo memory winnerInfo = tokenLotteryInfo[winnerInfoHash];
+            bytes32 infoHash = keccak256(abi.encodePacked(winnerInfo.nft, winnerInfo.id));
 
             if (tokenInfo[infoHash].weightsFomulaLottery > 0) {
-                lotteryRewards[nft][winnerId] = lotteryRewards[nft][winnerId] + prizePerWinner;
-                winnerBoard[requestId][nft].push(winnerId);
-                emit SelectWinner(nft, winnerId, prizePerWinner);
+                lotteryRewards[winnerInfo.nft][winnerInfo.id] = lotteryRewards[winnerInfo.nft][winnerInfo.id] + prizePerWinner;
+                winnerBoard[requestId].push(winnerIndex);
+                prizeTotal = prizeTotal + prizePerWinner;
+                emit SelectWinner(winnerInfo.nft, winnerInfo.id, prizePerWinner);
             }
         }
-        requestIds[requestId][nft] = true;
+
+        poolsTotalRewards[pool] = poolsTotalRewards[pool] - prizeTotal;
+        requestIds[requestId][pool] = true;
     }
-    function getWinnerBoard(uint256 requestId, address nft) external view override returns (uint256[] memory) {
-        return winnerBoard[requestId][nft];
-    }
-    function setWinnerBoard(uint256 requestId, address nft, uint256[] memory ids) external onlyOwner override {
-        winnerBoard[requestId][nft] = ids;
-    }
-    function complementWinner(address nft, uint256 id, uint256 prizePerWinner) external onlyOwner override {
-        lotteryRewards[nft][id] = lotteryRewards[nft][id] + prizePerWinner;
-    }
-    function complementAndSetWinner(address nft, uint256 id, uint256 prizePerWinner) external onlyOwner override {
-        lotteryRewards[nft][id] = lotteryRewards[nft][id] + prizePerWinner;
-        emit SelectWinner(nft, id, prizePerWinner);
+    function getWinnerBoard(uint256 requestId) external view override returns (uint256[] memory) {
+        return winnerBoard[requestId];
     }
 
     function setHotpotPoolToCurvePool(address hotpotPoolAddress, address curvePoolAddress) external onlyOwner override {
@@ -247,6 +260,10 @@ contract InvestNFTGatewayEthereum is BaseGatewayEthereum {
 
     function getHotpotPoolToCurvePool(address hotpotPoolAddress) external view override returns (address) {
         return hotpotPoolToCurvePool[hotpotPoolAddress];
+    }
+
+    function setRedeemableTime(uint256 timestamp) external onlyOwner override {
+        redeemableTime = timestamp;
     }
     event SelectWinner(address _nft, uint256 _tokenId, uint256 _amounts);
 }

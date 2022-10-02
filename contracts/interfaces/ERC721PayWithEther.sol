@@ -13,10 +13,10 @@ import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import "@openzeppelin/contracts/utils/Context.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 
-import "../interfaces/IBaseGatewayEthereum.sol";
-import "../interfaces/IFactoryERC721PayWithEther.sol";
+import "./IBaseGatewayEthereum.sol";
+import "./IFactoryERC721PayWithEther.sol";
 
-contract stubERC721 is IFactoryERC721PayWithEther, Ownable, ERC721Enumerable {
+contract ERC721PayWithEther is IFactoryERC721PayWithEther, Ownable, ERC721Enumerable {
     using MerkleProof for bytes32[];
 
     uint256 public constant MAX_TOTAL_TOKEN_MINT = 250;
@@ -39,7 +39,7 @@ contract stubERC721 is IFactoryERC721PayWithEther, Ownable, ERC721Enumerable {
     uint256 constant private BASE_VALUE_PERCENTAGE = 70;
 
     uint32 constant public WHITELIST_MINT_TIME = 1664704800;
-    uint32 constant public MINT_TIME = 1663689600;
+    uint32 constant public MINT_TIME = 1664715600;
 
     bool private isBlindBoxOpened = false;
     string private BLIND_BOX_URI;
@@ -150,13 +150,14 @@ contract stubERC721 is IFactoryERC721PayWithEther, Ownable, ERC721Enumerable {
 
     function mint(uint256 _numberTokens, bytes32[] memory proof) hasInitialized canMint(_numberTokens) payable external override {
 
-        // require(DEMI_HUMAN_NFT.balanceOf(msg.sender) > 0 || CRYPTO_HODLERS_NFT.balanceOf(msg.sender) > 0 || _8SIAN_NFT.balanceOf(msg.sender) > 0, "You not own specified NFT");
+        require(DEMI_HUMAN_NFT.balanceOf(msg.sender) > 0 || CRYPTO_HODLERS_NFT.balanceOf(msg.sender) > 0 || _8SIAN_NFT.balanceOf(msg.sender) > 0, "You not own specified NFT");
 
         if(block.timestamp < MINT_TIME) {
             bytes32 leaf = keccak256(abi.encodePacked(msg.sender));
             WhitelistData storage data = whitelist[msg.sender];
             data.amount += _numberTokens;
             
+            require(block.timestamp >= WHITELIST_MINT_TIME, "Not arrive whitelist mint time");
             require(data.isWhitelistAddress || proof.verify(PRE_WHITELIST, leaf), "Not in whitelist");
             require(data.amount <= WHITELIST_MINT_LIMIT, "Total mint amount big than whitelist mint limit");
         }
